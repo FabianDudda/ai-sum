@@ -30,12 +30,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+import { useSession } from "next-auth/react";
+
 async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
-  console.log(formData);
-  // no-cache for refetch data on every page reload
-  const res = await fetch("http://localhost:3000/api/summarys", {
+  console.log("formData: ", formData);
+
+  const res = await fetch("http://localhost:3000/api/summaries", {
     method: "POST",
-    cache: "no-cache",
+    // cache: "no-cache", // for refetch data on every page reload
     headers: {
       "Content-Type": "application/json",
     },
@@ -46,6 +48,7 @@ async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
         summary: docs.text,
       },
       source: formData.source,
+      userId: formData.userEmail,
     }),
   });
 
@@ -64,14 +67,19 @@ interface FormData {
   title: string;
   text: string;
   source: string;
+  userEmail: string;
 }
 
 export function LlmMapReduce() {
+  // user object
+  const { status, data } = useSession();
+  console.log("useSession(): ", useSession());
   // formData: title, text, source
   const [formData, setFormData] = useState<FormData>({
     title: "",
     text: "",
     source: "",
+    userEmail: data?.user?.email || "",
   });
   // formData: texttype
   const [textType, setTextType] = useState<string>("standard"); // Default type is standard
@@ -164,9 +172,6 @@ export function LlmMapReduce() {
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = event.target;
 
-    console.log("name: ", name);
-    console.log("value: ", value);
-
     // Check if input text is under 20.000 characters
     if (value.length < 20000)
       // Event handler for form input changes
@@ -182,7 +187,6 @@ export function LlmMapReduce() {
   // Event handler for form submit
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("click");
 
     try {
       // Create llm
@@ -225,120 +229,129 @@ export function LlmMapReduce() {
     }
   };
 
-  return (
-    <div className="flex flex-col items-center">
-      <div className="w-full max-w-3xl">
-        <h1 className="text-2xl">Summarize a text with mapReduce</h1>
-        max. characters: 20.000 (~ 3.000 words)
-        <br />
-        chunkSize: 4000
-        <br />
-        chunkOverlap: 200
-        <br />
-        <br />
-      </div>
-      <div className="rounded-2xl border h-auto w-full max-w-3xl flex flex-col justify-between">
-        <div className="p-4 overflow-auto">
-          <Accordion type="single" defaultValue="item-main-response" collapsible className="w-full">
-            {/* Render text from intermediateSteps if available */}
-            {response.intermediateSteps && (
-              <div>
-                <p className="font-bold">Summarys:</p>
-                {response.intermediateSteps.map((step: string, stepIndex: number) => (
-                  <AccordionItem key={stepIndex} value={`item-${stepIndex}`}>
-                    <AccordionTrigger>ChunkedDoc No: {stepIndex}</AccordionTrigger>
+  if (status === "authenticated") {
+    return (
+      <div className="flex flex-col items-center">
+        <div className="w-full max-w-3xl">
+          <h1 className="text-2xl">Summarize a text with mapReduce</h1>
+          max. characters: 20.000 (~ 3.000 words)
+          <br />
+          chunkSize: 4000
+          <br />
+          chunkOverlap: 200
+          <br />
+          <br />
+        </div>
+        <div className="rounded-2xl border h-auto w-full max-w-3xl flex flex-col justify-between">
+          <div className="p-4 overflow-auto">
+            <Accordion
+              type="single"
+              defaultValue="item-main-response"
+              collapsible
+              className="w-full"
+            >
+              {/* Render text from intermediateSteps if available */}
+              {response.intermediateSteps && (
+                <div>
+                  <p className="font-bold">summaries:</p>
+                  {response.intermediateSteps.map((step: string, stepIndex: number) => (
+                    <AccordionItem key={stepIndex} value={`item-${stepIndex}`}>
+                      <AccordionTrigger>ChunkedDoc No: {stepIndex}</AccordionTrigger>
+                      <AccordionContent>
+                        <div style={{ whiteSpace: "pre-line" }}>{step.replace("\n\n", "")}</div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </div>
+              )}
+              {response.text && (
+                <div>
+                  <AccordionItem value={`item-main-response`}>
+                    <AccordionTrigger>Main Response:</AccordionTrigger>
                     <AccordionContent>
-                      <div style={{ whiteSpace: "pre-line" }}>{step.replace("\n\n", "")}</div>
+                      <div style={{ whiteSpace: "pre-line" }}>
+                        {response.text.replace("\n\n", "")}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
-                ))}
-              </div>
-            )}
-            {response.text && (
-              <div>
-                <AccordionItem value={`item-main-response`}>
-                  <AccordionTrigger>Main Response:</AccordionTrigger>
-                  <AccordionContent>
-                    <div style={{ whiteSpace: "pre-line" }}>
-                      {response.text.replace("\n\n", "")}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-                <p className="font-bold">Share your summary:</p>
-                <p>localhost:3000/summaries/{summaryId}</p>
-                <p className="font-bold">Estimated Token Cost:</p> <p>{estimatedTokens}</p>{" "}
-              </div>
-            )}
-          </Accordion>
+                  <p className="font-bold">Share your summary:</p>
+                  <p>localhost:3000/summaries/{summaryId}</p>
+                  <p className="font-bold">Estimated Token Cost:</p> <p>{estimatedTokens}</p>{" "}
+                </div>
+              )}
+            </Accordion>
+          </div>
+          <form onSubmit={handleSubmit} className="grid w-full gap-1.5 space-y-2 p-4">
+            <div className="w-auto">
+              <Label>Text</Label>
+              <Textarea
+                name="text"
+                value={formData.text}
+                onChange={handleChange}
+                placeholder="Enter your text here"
+                className="min-h-60"
+              />
+              <p className="text-xs text-muted-foreground text-neutral-500 dark:text-neutral-400">
+                Max 16.000 characters allowed.
+              </p>
+            </div>
+            <div className="w-auto">
+              <Label>Title</Label>
+              <Input
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Title"
+              />
+            </div>
+            <div className="w-auto">
+              <Label>Source</Label>
+              <Input
+                name="source"
+                value={formData.source}
+                onChange={handleChange}
+                placeholder="Source URL"
+              />
+            </div>
+            <div className="w-auto">
+              <Label>Type</Label>
+              <Select onValueChange={setTextType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Standard" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="news">News</SelectItem>
+                    <SelectItem value="scientific">Scientific paper</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-auto">
+              <Label>Options</Label>
+              <Select onValueChange={setSummarizationOptions}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Standard" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="technical">Technical</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-auto">
+              Summarize
+            </Button>
+          </form>
         </div>
-        <form onSubmit={handleSubmit} className="grid w-full gap-1.5 space-y-2 p-4">
-          <div className="w-auto">
-            <Label>Text</Label>
-            <Textarea
-              name="text"
-              value={formData.text}
-              onChange={handleChange}
-              placeholder="Enter your text here"
-              className="min-h-60"
-            />
-            <p className="text-xs text-muted-foreground text-neutral-500 dark:text-neutral-400">
-              Max 16.000 characters allowed.
-            </p>
-          </div>
-          <div className="w-auto">
-            <Label>Title</Label>
-            <Input
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Title"
-            />
-          </div>
-          <div className="w-auto">
-            <Label>Source</Label>
-            <Input
-              name="source"
-              value={formData.source}
-              onChange={handleChange}
-              placeholder="Source URL"
-            />
-          </div>
-          <div className="w-auto">
-            <Label>Type</Label>
-            <Select onValueChange={setTextType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Standard" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="news">News</SelectItem>
-                  <SelectItem value="scientific">Scientific paper</SelectItem>
-                  <SelectItem value="website">Website</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-auto">
-            <Label>Options</Label>
-            <Select onValueChange={setSummarizationOptions}>
-              <SelectTrigger>
-                <SelectValue placeholder="Standard" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="technical">Technical</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-auto">
-            Summarize
-          </Button>
-        </form>
       </div>
-    </div>
-  );
+    );
+  } else {
+    return <>Not authenticated</>;
+  }
 }

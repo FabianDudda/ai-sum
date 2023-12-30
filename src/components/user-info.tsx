@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 
 export function UserInfo() {
   const { status, data: session } = useSession();
+  console.log(useSession());
 
   if (status === "authenticated") {
     return (

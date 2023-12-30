@@ -10,6 +10,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    id: {
+      type: String,
+      required: false,
+    },
   },
   { timestamps: true }
 );

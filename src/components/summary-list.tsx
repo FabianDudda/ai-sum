@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/card";
 import React, { useState, useEffect, ChangeEvent } from "react";
 
-export function SummaryList({ data }: { data: any[] }) {
-  console.log("allData from DB:", data);
+export async function SummaryList({ data }: { data: any[] }) {
+  // user object
+  // console.log("useSession(): ", useSession());
+  // const data = await getData("6590469d09a14d335d686175");
 
   return (
     <div>

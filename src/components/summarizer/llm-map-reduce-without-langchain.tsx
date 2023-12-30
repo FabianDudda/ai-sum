@@ -24,7 +24,7 @@ import { text } from "stream/consumers";
 
 async function insertDataToDatabase(formData: FormData, summary: String) {
   // no-cache for refetch data on every page reload
-  const res = await fetch("http://localhost:3000/api/summarys", {
+  const res = await fetch("http://localhost:3000/api/summaries", {
     method: "POST",
     cache: "no-cache",
     headers: {
@@ -70,9 +70,6 @@ export function LlmMapReduceWithoutLangchain() {
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = event.target;
 
-    console.log("name: ", name);
-    console.log("value: ", value);
-
     // Check if input text is under 150.000 characters
     if (value.length < 20000)
       // Event handler for form input changes
@@ -87,8 +84,6 @@ export function LlmMapReduceWithoutLangchain() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // Hier kannst du Logik für das Absenden des Formulars hinzufügen
-    console.log("click");
 
     // Define prompt templates for document step #1 mapPrompt and step #2 combinePrompt
     // step #1 map prompt: Summarize each chunkedDoc

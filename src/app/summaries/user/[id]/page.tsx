@@ -1,9 +1,14 @@
 import { NavigationBar } from "@/components/navigation-bar";
 import { SummaryList } from "@/components/summary-list";
 
-async function getData() {
+import { useSession } from "next-auth/react";
+
+async function getData(userId: String) {
   // no-cache for refetch data on every page reload
-  const res = await fetch("http://localhost:3000/api/summaries", { cache: "no-cache" });
+  const res = await fetch(`http://localhost:3000/api/summaries/user/${userId}`, {
+    method: "GET",
+    cache: "no-cache",
+  });
   // The return value is *not* serialized
   // You can return Date, Map, Set, etc.
 
@@ -15,8 +20,12 @@ async function getData() {
   return res.json();
 }
 
-export default async function Page() {
-  const data = await getData();
+export default async function Page({ params }: { params: any }) {
+  const data = await getData(params.id);
+  // user object
+  // console.log("useSession(): ", useSession());
+
+  // const data = await getData("6590469d09a14d335d686175");
 
   return (
     <>

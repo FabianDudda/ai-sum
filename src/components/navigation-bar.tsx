@@ -15,9 +15,12 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { connectMongoDB } from "@/lib/mongodb";
+import Summary from "@/models/summary";
 
 export function NavigationBar() {
   const { status } = useSession();
+
   return (
     <nav>
       <div className="p-4 flex h-14 items-center justify-between supports-backdrop-blur:bg-background/60 sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
@@ -49,8 +52,12 @@ export function NavigationBar() {
               <NavigationMenuTrigger>Explore</NavigationMenuTrigger>
               <NavigationMenuContent>
                 <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-                  <ListItem href="/summaries" title="Summarys">
-                    Discover the newest summaries.
+                  <ListItem href="/summaries" title="All summaries">
+                    Discover all summaries.
+                  </ListItem>
+                  {/* TODO: href dynamisch machen */}
+                  <ListItem href="/summaries/user/6590469d09a14d335d686175" title="Your summaries">
+                    Discover your summaries.
                   </ListItem>
                 </ul>
               </NavigationMenuContent>

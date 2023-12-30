@@ -1,8 +1,10 @@
 import { NavigationBar } from "@/components/navigation-bar";
 
-async function getData(id: any) {
+async function getData(summaryId: any) {
   // no-cache for refetch data on every page reload
-  const res = await fetch(`http://localhost:3000/api/summarys/${id}`, { cache: "no-cache" });
+  const res = await fetch(`http://localhost:3000/api/summaries/${summaryId}`, {
+    cache: "no-cache",
+  });
   // The return value is *not* serialized
   // You can return Date, Map, Set, etc.
 
@@ -16,10 +18,6 @@ async function getData(id: any) {
 
 export default async function Page({ params }: { params: any }) {
   const data = await getData(params.id);
-
-  console.log("id: ", params.id);
-
-  console.log(data);
 
   return (
     <>

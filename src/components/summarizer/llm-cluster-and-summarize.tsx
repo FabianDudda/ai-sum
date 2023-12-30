@@ -19,7 +19,7 @@ import { ChainValues } from "langchain/schema";
 
 async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
   // no-cache for refetch data on every page reload
-  const res = await fetch("http://localhost:3000/api/summarys", {
+  const res = await fetch("http://localhost:3000/api/summaries", {
     method: "POST",
     cache: "no-cache",
     headers: {
@@ -64,9 +64,6 @@ export function LlmClusterAndSummarize() {
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = event.target;
 
-    console.log("name: ", name);
-    console.log("value: ", value);
-
     // Check if input text is under 150.000 characters
     if (value.length < 150000)
       // Event handler for form input changes
@@ -95,9 +92,6 @@ export function LlmClusterAndSummarize() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // Hier kannst du Logik für das Absenden des Formulars hinzufügen
-    // Zum Beispiel: API-Aufruf, State-Update, etc.
-    console.log("click");
 
     try {
       // Create language model
