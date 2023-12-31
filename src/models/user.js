@@ -10,9 +10,13 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    id: {
+    credits: {
+      type: Number,
+      required: true,
+    },
+    googleId: {
       type: String,
-      required: false,
+      required: true,
     },
   },
   { timestamps: true }

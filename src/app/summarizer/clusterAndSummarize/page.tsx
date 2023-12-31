@@ -1,5 +1,5 @@
-import { NavigationBar } from "@/components/navigation-bar";
-import { LlmClusterAndSummarize } from "@/components/summarizer/llm-cluster-and-summarize";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
+import { LlmClusterAndSummarize } from "@/components/summarizer/cluster-and-summarize";
 
 export default function Page() {
   return (

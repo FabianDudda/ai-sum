@@ -15,55 +15,64 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import React, { useState, ChangeEvent } from "react";
 
-import { ChainValues } from "langchain/schema";
+import { FormData, insertDataToDatabase } from "@/utils/api";
+import { useSession } from "next-auth/react";
 
-async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
-  // no-cache for refetch data on every page reload
-  const res = await fetch("http://localhost:3000/api/summaries", {
-    method: "POST",
-    cache: "no-cache",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      title: formData.title,
-      text: {
-        original: formData.text,
-        summary: docs.text,
-      },
-      source: formData.source,
-    }),
-  });
+// import { ChainValues } from "langchain/schema";
 
-  // The return value is *not* serialized
-  // You can return Date, Map, Set, etc.
+// async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
+//   // no-cache for refetch data on every page reload
+//   const res = await fetch("http://localhost:3000/api/summaries", {
+//     method: "POST",
+//     cache: "no-cache",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({
+//       title: formData.title,
+//       text: {
+//         original: formData.text,
+//         summary: docs.text,
+//       },
+//       source: formData.source,
+//     }),
+//   });
 
-  if (!res.ok) {
-    // This will activate the closest `error.js` Error Boundary
-    throw new Error("Failed to fetch data");
-  }
+//   // The return value is *not* serialized
+//   // You can return Date, Map, Set, etc.
 
-  return res.json();
-}
+//   if (!res.ok) {
+//     // This will activate the closest `error.js` Error Boundary
+//     throw new Error("Failed to fetch data");
+//   }
 
-interface FormData {
-  title: string;
-  text: string;
-  source: string;
-}
+//   return res.json();
+// }
+
+// interface FormData {
+//   title: string;
+//   text: string;
+//   source: string;
+// }
 
 export function LlmClusterAndSummarize() {
+  // session
+  const { status, data: session } = useSession();
+  console.log(session);
   const [response, setResponse] = useState<any[]>([]);
+  // formData: title, text, source, userId
   const [formData, setFormData] = useState<FormData>({
     title: "",
     text: "",
     source: "",
+    // @ts-ignore
+    userId: session?.user?._id || "",
   });
 
   // Event handler for form input changes
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = event.target;
-
+    console.log(formData);
     // Check if input text is under 150.000 characters
     if (value.length < 150000)
       // Event handler for form input changes
@@ -97,7 +106,7 @@ export function LlmClusterAndSummarize() {
       // Create language model
       const model = new OpenAI({
         maxTokens: 1000,
-        openAIApiKey: "NEXT_PUBLIC_OPENAI_API_KEY",
+        openAIApiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
         temperature: 0,
       });
 
@@ -111,7 +120,7 @@ export function LlmClusterAndSummarize() {
       console.log("chunkedDocs: ", docs);
 
       const embeddings = new OpenAIEmbeddings({
-        openAIApiKey: "NEXT_PUBLIC_OPENAI_API_KEY",
+        openAIApiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
       });
 
       const arrayOfStrings = docs.map((doc) => doc.pageContent);
@@ -189,81 +198,85 @@ export function LlmClusterAndSummarize() {
 
       setResponse([res]);
 
-      await insertDataToDatabase(formData, res);
+      // @ts-ignore
+      await insertDataToDatabase(formData, res, session?.user?._id);
     } catch (e) {
       console.error(e);
       throw new Error("Something failed");
     }
   };
+  if (status === "authenticated") {
+    return (
+      <div>
+        <h1 className="text-2xl">Cluster Pages and Summarize just one page for each cluster</h1>
+        max. characters: 200.000
+        <br />
+        chunkSize: 6000
+        <br />
+        chunkOverlap: 200
+        <br />
+        number of clusters: 8
+        <br />
+        <br />
+        <div className="rounded-2xl border h-[75vh] flex flex-col justify-between">
+          <div className="p-6 overflow-auto">
+            {response.map((item, index) => (
+              <div key={index}>
+                {/* Render text from intermediateSteps if available */}
+                {item.intermediateSteps && (
+                  <div>
+                    <p>Intermediate Steps:</p>
+                    {item.intermediateSteps.map((step: string, stepIndex: number) => (
+                      <p key={stepIndex}>
+                        Intermediate Step No: {stepIndex} <br />
+                        {step}
+                      </p>
+                    ))}
+                  </div>
+                )}
 
-  return (
-    <div>
-      <h1 className="text-2xl">Cluster Pages and Summarize just one page for each cluster</h1>
-      max. characters: 200.000
-      <br />
-      chunkSize: 6000
-      <br />
-      chunkOverlap: 200
-      <br />
-      number of clusters: 8
-      <br />
-      <br />
-      <div className="rounded-2xl border h-[75vh] flex flex-col justify-between">
-        <div className="p-6 overflow-auto">
-          {response.map((item, index) => (
-            <div key={index}>
-              {/* Render text from intermediateSteps if available */}
-              {item.intermediateSteps && (
-                <div>
-                  <p>Intermediate Steps:</p>
-                  {item.intermediateSteps.map((step: string, stepIndex: number) => (
-                    <p key={stepIndex}>
-                      Intermediate Step No: {stepIndex} <br />
-                      {step}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {/* Render text from the main response */}
-              <p>Main Response: {item.text}</p>
-              <p>Estimated tokens: ~ 10.000 = 4.000 chunksize * 10 selected Pages</p>
-            </div>
-          ))}
-        </div>
-        {/* <form onSubmit={handleSubmit} className="p-4 flex clear-both">
+                {/* Render text from the main response */}
+                <p>Main Response: {item.text}</p>
+                <p>Estimated tokens: ~ 10.000 = 4.000 chunksize * 10 selected Pages</p>
+              </div>
+            ))}
+          </div>
+          {/* <form onSubmit={handleSubmit} className="p-4 flex clear-both">
           <Button type="submit" className="w-24">
             Generate
           </Button>
         </form> */}
-        <form onSubmit={handleSubmit} className="grid w-full gap-1.5 space-y-6 p-4">
-          <div>
-            <Input
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Title"
-            />
-            <Textarea
-              name="text"
-              value={formData.text}
-              onChange={handleChange}
-              placeholder="Enter your text here"
-            />
-            <Input
-              name="source"
-              value={formData.source}
-              onChange={handleChange}
-              placeholder="Source URL"
-            />
-            {/* <Input name="doi" value={formData.doi} onChange={handleChange} placeholder="DOI" /> */}
-            <p className="text-xs text-muted-foreground">Max 16.000 characters allowed.</p>
-          </div>
-          <Button type="submit" className="w-24">
-            Summarize
-          </Button>
-        </form>
+          <form onSubmit={handleSubmit} className="grid w-full gap-1.5 space-y-6 p-4">
+            <div>
+              <Input
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Title"
+              />
+              <Textarea
+                name="text"
+                value={formData.text}
+                onChange={handleChange}
+                placeholder="Enter your text here"
+              />
+              <Input
+                name="source"
+                value={formData.source}
+                onChange={handleChange}
+                placeholder="Source URL"
+              />
+              {/* <Input name="doi" value={formData.doi} onChange={handleChange} placeholder="DOI" /> */}
+              <p className="text-xs text-muted-foreground">Max 16.000 characters allowed.</p>
+            </div>
+            <Button type="submit" className="w-24">
+              Summarize
+            </Button>
+          </form>
+        </div>
       </div>
-    </div>
-  );
+    );
+  } else {
+    return <>Not authenticated</>;
+  }
 }

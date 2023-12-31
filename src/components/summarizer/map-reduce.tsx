@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, ChangeEvent } from "react";
+import React, { useState, ChangeEvent } from "react";
+import { useSession } from "next-auth/react";
 
 import { OpenAI } from "langchain/llms/openai";
 import { loadSummarizationChain } from "langchain/chains";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { ChainValues } from "langchain/schema";
 import { PromptTemplate } from "langchain/prompts";
+
+import { FormData, insertDataToDatabase } from "@/utils/api";
+
+import { getCombinePromptTemplate, getCombineMapPromptTemplate } from "@/utils/promptTemplate";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import {
   Select,
   SelectContent,
@@ -22,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import {
   Accordion,
   AccordionContent,
@@ -30,56 +32,15 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-import { useSession } from "next-auth/react";
-
-async function insertDataToDatabase(formData: FormData, docs: ChainValues) {
-  console.log("formData: ", formData);
-
-  const res = await fetch("http://localhost:3000/api/summaries", {
-    method: "POST",
-    // cache: "no-cache", // for refetch data on every page reload
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      title: formData.title,
-      text: {
-        original: formData.text,
-        summary: docs.text,
-      },
-      source: formData.source,
-      userId: formData.userEmail,
-    }),
-  });
-
-  // The return value is *not* serialized
-  // You can return Date, Map, Set, etc.
-
-  if (!res.ok) {
-    // This will activate the closest `error.js` Error Boundary
-    throw new Error("Failed to fetch data");
-  }
-
-  return res.json();
-}
-
-interface FormData {
-  title: string;
-  text: string;
-  source: string;
-  userEmail: string;
-}
-
 export function LlmMapReduce() {
-  // user object
-  const { status, data } = useSession();
-  console.log("useSession(): ", useSession());
-  // formData: title, text, source
+  // session
+  const { status, data: session } = useSession();
+  console.log(session);
+  // formData: title, text, source, userId
   const [formData, setFormData] = useState<FormData>({
     title: "",
     text: "",
     source: "",
-    userEmail: data?.user?.email || "",
   });
   // formData: texttype
   const [textType, setTextType] = useState<string>("standard"); // Default type is standard
@@ -90,88 +51,12 @@ export function LlmMapReduce() {
   // llm response
   const [response, setResponse] = useState<any>({});
   // objectId from api response
-  const [summaryId, setSummaryId] = useState<string>("");
-
-  // Customize combineMapPromptTemplate based on textType
-  const getCombineMapPromptTemplate = (textType: string) => {
-    switch (textType) {
-      case "standard": // Default
-        return `Write a concise summary in bullet points: "{text}"`;
-      case "scientific":
-        return `Write a concise summary in bullet points: "{text}"`;
-      case "news":
-        return `Write a concise summary in bullet points: "{text}"`;
-      case "website":
-        return `Write a concise summary in bullet points: "{text}"`;
-      default:
-        return `Write a concise summary in bullet points: "{text}"`;
-    }
-  };
-
-  // Customize combinePromptTemplate based on summarizationOptions
-  const getCombinePromptTemplate = (summarizationOptions: string) => {
-    switch (summarizationOptions) {
-      case "standard": // Default
-        return `As a professional summarizer for blinkist, create a concise and comprehensive summary of the provided text -
-        The text will be enclosed in triple hashtags (###) - while adhering to these guidelines:
-        1. Craft a summary that is concise and to the point with a well-organized structure.
-        2. Write in a natural and conversational language with an engaging and informative tone.
-        3. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
-        4. Rely strictly on the provided text, without including external information.
-        5. Your response should be at least three paragraphs and fully encompass what was said in the text.
-        ###"{text}"###`;
-      case "friendly":
-        return `As a friendly summarizer for blinkist, create a concise and easy-to-understand summary of the provided text -
-        The text will be enclosed in triple hashtags (###) - while adhering to these guidelines:
-        1. Craft a summary that is concise and to the point with a well-organized structure.
-        2. Write in a natural and conversational language with an engaging and informative tone.
-        3. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
-        4. Rely strictly on the provided text, without including external information.
-        5. Your response should be at least three paragraphs and fully encompass what was said in the text.
-        ###"{text}"###`;
-      case "technical":
-        return `As a technical summarizer for blinkist, create a detailed and technical summary of the provided text -
-        The text will be enclosed in triple hashtags (###) - while adhering to these guidelines:
-        1. Craft a summary that is concise and to the point with a well-organized structure.
-        2. Write in a natural and conversational language with an engaging and informative tone.
-        3. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
-        4. Rely strictly on the provided text, without including external information.
-        5. Your response should be at least three paragraphs and fully encompass what was said in the text.
-        ###"{text}"###`;
-      default:
-        return `As a professional summarizer for blinkist, create a concise and comprehensive summary of the provided text -
-        The text will be enclosed in triple hashtags (###) - while adhering to these guidelines:
-        1. Craft a summary that is concise and to the point with a well-organized structure.
-        2. Write in a natural and conversational language with an engaging and informative tone.
-        3. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
-        4. Rely strictly on the provided text, without including external information.
-        5. Your response should be at least three paragraphs and fully encompass what was said in the text.
-        ###"{text}"###`;
-    }
-  };
-
-  // PromptTemplate for intermediate summary step
-  const combineMapPrompt = new PromptTemplate({
-    template: getCombineMapPromptTemplate(textType),
-    inputVariables: ["text"],
-  });
-
-  // PromptTemplate for final summary step
-  const combinePrompt = new PromptTemplate({
-    template: getCombinePromptTemplate(summarizationOptions),
-    inputVariables: ["text"],
-  });
-
-  // Create textSplitter
-  const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 4000,
-    chunkOverlap: 200,
-  });
+  const [summaryId, setSummaryId] = useState<String>("");
 
   // Event handler for form input changes
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = event.target;
-
+    console.log(formData);
     // Check if input text is under 20.000 characters
     if (value.length < 20000)
       // Event handler for form input changes
@@ -188,41 +73,67 @@ export function LlmMapReduce() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    // @ts-ignore // Check user role and limit form submissions
+    if (session?.user?.credits <= 0) {
+      console.log("Not enough credits.");
+      throw new Error("Not enough credits.");
+    }
+
     try {
-      // Create llm
+      // OpenAi LLM Model
       const model = new OpenAI({
         maxTokens: 1000,
         openAIApiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
         temperature: 0,
       });
 
-      const docs = await textSplitter.createDocuments([formData.text]);
-      console.log("chunkedDocs:", docs);
+      // TextSplitter for chunkSize and chunkOverlap
+      const textSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 4000,
+        chunkOverlap: 200,
+      });
+
+      // Chunked docs
+      const chunkedDocs = await textSplitter.createDocuments([formData.text]);
+      console.log("chunkedDocs:", chunkedDocs);
 
       // Calculate estimated tokens (calc tokens for one chunkedDoc * (number of chunkedDocs + 1))
-      const tokens = (await model.getNumTokens(docs[0].pageContent)) * (docs.length + 1);
+      const tokens =
+        (await model.getNumTokens(chunkedDocs[0].pageContent)) * (chunkedDocs.length + 1);
       setEstimatedTokens(tokens);
       console.log("estimated tokens:", tokens);
 
-      // Create llm chain
+      // PromptTemplate for intermediate summary step
+      const combineMapPrompt = new PromptTemplate({
+        template: getCombineMapPromptTemplate(textType),
+        inputVariables: ["text"],
+      });
+
+      // PromptTemplate for final summary step
+      const combinePrompt = new PromptTemplate({
+        template: getCombinePromptTemplate(summarizationOptions),
+        inputVariables: ["text"],
+      });
+
+      // MapReduce Chain
       const chain = loadSummarizationChain(model, {
         type: "map_reduce",
-        combineMapPrompt: combineMapPrompt,
-        combinePrompt: combinePrompt,
         returnIntermediateSteps: true,
         // verbose: true,
+        combineMapPrompt: combineMapPrompt,
+        combinePrompt: combinePrompt,
       });
 
-      // Call llm chain
-      const res = await chain.call({
-        input_documents: docs,
+      // Call chain
+      const chainResponse = await chain.call({
+        input_documents: chunkedDocs,
       });
-      setResponse(res);
-      console.log("response:", res);
+      setResponse(chainResponse);
+      console.log("chainResponse:", chainResponse);
 
-      // Insert data to db
-      const apiResponse = await insertDataToDatabase(formData, res);
-      setSummaryId(apiResponse.insertedId);
+      // @ts-ignore // Insert data to MongoDB and get the summaryId back
+      const newSummary = await insertDataToDatabase(formData, chainResponse, session?.user?._id);
+      setSummaryId(newSummary._id);
     } catch (e) {
       console.error(e);
       throw new Error("Something failed");

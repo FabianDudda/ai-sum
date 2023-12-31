@@ -104,7 +104,7 @@ export function LlmMapReduceWithoutLangchain() {
       // Create language model
       const model = new OpenAI({
         maxTokens: 1000,
-        openAIApiKey: "NEXT_PUBLIC_OPENAI_API_KEY",
+        openAIApiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
         temperature: 0,
       });
 

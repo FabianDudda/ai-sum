@@ -1,4 +1,4 @@
-import { NavigationBar } from "@/components/navigation-bar";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
 import { LlmMapReduceWithoutLangchain } from "@/components/summarizer/llm-map-reduce-without-langchain";
 
 export default async function Page() {

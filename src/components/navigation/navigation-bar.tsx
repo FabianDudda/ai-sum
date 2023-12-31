@@ -5,7 +5,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { DarkModeToggle } from "@/components/button/dark-mode-toggle";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -15,11 +15,12 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { connectMongoDB } from "@/lib/mongodb";
-import Summary from "@/models/summary";
 
 export function NavigationBar() {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
+
+  // @ts-ignore
+  const userId = session?.user?._id;
 
   return (
     <nav>
@@ -55,8 +56,8 @@ export function NavigationBar() {
                   <ListItem href="/summaries" title="All summaries">
                     Discover all summaries.
                   </ListItem>
-                  {/* TODO: href dynamisch machen */}
-                  <ListItem href="/summaries/user/6590469d09a14d335d686175" title="Your summaries">
+                  {/* .id wird console log angezeigt, also funktionert es */}
+                  <ListItem href={`/summaries/user/${userId}`} title="Your summaries">
                     Discover your summaries.
                   </ListItem>
                 </ul>

@@ -1,5 +1,5 @@
-import { NavigationBar } from "@/components/navigation-bar";
-import { LlmMapReduce } from "@/components/summarizer/llm-map-reduce";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
+import { LlmMapReduce } from "@/components/summarizer/map-reduce";
 
 export default async function Page() {
   return (

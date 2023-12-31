@@ -1,4 +1,4 @@
-import { NavigationBar } from "@/components/navigation-bar";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
 
 import { UserInfo } from "@/components/user-info";
 export default async function Home() {

@@ -1,4 +1,4 @@
-import { NavigationBar } from "@/components/navigation-bar";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
 
 async function getData(summaryId: any) {
   // no-cache for refetch data on every page reload

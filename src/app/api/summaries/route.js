@@ -3,6 +3,8 @@ import { connectMongoDB } from "@/lib/mongodb";
 import Summary from "@/models/summary";
 import User from "@/models/user";
 
+import { getSession } from "next-auth/react";
+
 // To handle a GET request to /api/summaries
 // Return all summarys
 export async function GET(request) {
@@ -18,18 +20,16 @@ export async function GET(request) {
 export async function POST(request) {
   const {
     title,
-    text: { original, summary },
+    text: { summary, original },
     source,
-    userEmail,
+    userId,
   } = await request.json();
+
   await connectMongoDB();
 
-  const userByEmail = await User.findOne({ userEmail });
-
-  const userId = userByEmail._id.toString();
-
-  await Summary.create({ title, text: { original, summary }, source, userId });
-  return NextResponse.json({ message: "Summary saved" }, { status: 201 });
+  await User.updateOne({ _id: userId }, { $inc: { credits: -1 } });
+  const newSummary = await Summary.create({ title, text: { summary, original }, source, userId });
+  return NextResponse.json(newSummary, { status: 201 });
 }
 
 // Same logic to add a `PATCH`, `DELETE`...

@@ -9,7 +9,7 @@ const summarySchema = new Schema(
     text: {
       summary: {
         type: String,
-        required: true,
+        required: false,
       },
       original: {
         type: String,
@@ -22,7 +22,7 @@ const summarySchema = new Schema(
     },
     userId: {
       type: String,
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }

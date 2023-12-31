@@ -11,18 +11,29 @@ const authOptions = {
     }),
   ],
   callbacks: {
+    async session({ session }) {
+      const sessionUser = await User.findOne({ email: session.user.email });
+      console.log(sessionUser);
+      // set session.user._id to _id found in mongoDB "users" with session.user.email
+      session.user._id = sessionUser._id;
+      session.user.credits = sessionUser.credits;
+
+      return session;
+    },
     async signIn({ user, account }) {
-      // console.log("USER: ", user.id);
+      // console.log("USER: ", user);
       // console.log("ACCOUNT: ", account);
 
       if (account.provider === "google") {
-        const { name, email } = user;
+        const { name, email, id } = user;
 
         try {
           await connectMongoDB();
           const userExists = await User.findOne({ email });
 
           if (!userExists) {
+            const credits = 0;
+
             const res = await fetch("http://localhost:3000/api/users", {
               method: "POST",
               headers: {
@@ -31,6 +42,8 @@ const authOptions = {
               body: JSON.stringify({
                 name,
                 email,
+                credits,
+                googleId: id,
               }),
             });
 

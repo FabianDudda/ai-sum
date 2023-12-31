@@ -1,4 +1,4 @@
-import { NavigationBar } from "@/components/navigation-bar";
+import { NavigationBar } from "@/components/navigation/navigation-bar";
 import { SummaryList } from "@/components/summary-list";
 
 async function getData() {
